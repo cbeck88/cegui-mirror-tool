@@ -11,7 +11,7 @@ The basic idea is to have a github mirror of a bitbucket hg repository.
 
 To do that we have:
 
-- One local mercurial clone of official repository
+- One local mercurial clone of official bitbucket repository
 - Install `hg-git` mercurial plugin, and bookmarks plugin
 - Bookmark the branches that you want to be tracked remotely
 - Install ssh keys so that this server can pull and push unattended.
@@ -24,12 +24,13 @@ To do that we have
 
 - One local git clone of mirror repository
 - An extra "+travis" branch for each tracked branch. The +travis branch has
-  a .travis.yml file. (Set this up manually.
+  a .travis.yml file. (Set this up manually. There is a sample .travis.yml.)
 
 Then, put `rebase_git.sh` in a cron job. This will pull the tracked branches
-to the local git repo, checkout the +travis branches, rebase them against
-the tracked branches (putting the .travis.yml commit to the top) and push
-the rebased branches with force.
+from the mirror repository to the local git repo, checkout the +travis 
+ranches, rebase them against the tracked branches (putting the .travis.yml
+commit to the top) and push the rebased branches with force to github. This
+push-force command will trigger travis to build.
 
 details
 -------
@@ -42,10 +43,9 @@ First call `configure_hg.sh`. This will
 * setup two bookmarks, for v0-8 and default branches. A bookmark must
   be created for any branches that will exist in git.
 
-Then, set up ssh_keys.
+Then, set up ssh keys.
 
 The `hg_push.sh` and `hg_pull.sh` scripts should work at that point.
-intervals to make the github repo track the mercurial repo.
 
 Then call `configure_git.sh`. This will
 
@@ -76,3 +76,6 @@ file and branches if that doesn't already exist, the three shell scripts
 * `rebase_git.sh`
 
 should be called in regular intervals, by a cronjob or something.
+
+You don't want for them to run simultaneously in parallel. So, there is one
+script `cronjob.sh` which calls them consecutively.
