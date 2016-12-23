@@ -2,6 +2,37 @@ cegui mirror tool
 =================
 
 This is a tool to set up an automatic mirroring of a mercurial repository.
+Specifically it's set up for cegui, but it could be adapted.
+
+overview
+--------
+
+The basic idea is to have a github mirror of a bitbucket hg repository.
+
+To do that we have:
+
+- One local mercurial clone of official repository
+- Install `hg-git` mercurial plugin, and bookmarks plugin
+- Bookmark the branches that you want to be tracked remotely
+- Install ssh keys so that this server can pull and push unattended.
+
+Then, put `hg_push.sh` and `hg_pull.sh` in a cron job or something.
+
+The second part of the idea is to have travis running on the git mirror.
+
+To do that we have
+
+- One local git clone of mirror repository
+- An extra "+travis" branch for each tracked branch. The +travis branch has
+  a .travis.yml file. (Set this up manually.
+
+Then, put `rebase_git.sh` in a cron job. This will pull the tracked branches
+to the local git repo, checkout the +travis branches, rebase them against
+the tracked branches (putting the .travis.yml commit to the top) and push
+the rebased branches with force.
+
+details
+-------
 
 First call `configure_hg.sh`. This will
 
@@ -11,29 +42,18 @@ First call `configure_hg.sh`. This will
 * setup two bookmarks, for v0-8 and default branches. A bookmark must
   be created for any branches that will exist in git.
 
-Then, create a local ssh key and install the public key part in both
-bitbucket and github so that scripts can run unattended.
+Then, set up ssh_keys.
 
-Two shell scripts, `hg_push.sh`, and `hg_pull.sh` can be called in regular
+The `hg_push.sh` and `hg_pull.sh` scripts should work at that point.
 intervals to make the github repo track the mercurial repo.
 
-travis
-------
+Then call `configure_git.sh`. This will
 
-The second part of the equation is getting travis working.
+* clone the mirror repository
+* set up remote tracking branches
 
-Travis requires that we actually place a .travis.yml file into the repository.
-
-But, it doesn't exist in the official repository!
-
-Therefore, for each mirrored branch there is a "+travis" version, which will
-have the  travis file. And we use git to continually pull --rebase into these
-branches. And push those.
-
-The `configure_git.sh` script sets up this git repository.
-
-It does not set up the "+travis" branches or the .travis.yml file, that must
-be done by hand.
+The `rebase_git.sh` script should work at that point *if* you set up the
++travis branches manually correctly.
 
 branches
 --------
