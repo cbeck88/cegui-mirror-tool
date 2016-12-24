@@ -1,0 +1,99 @@
+sudo: required
+dist: trusty
+language: cpp
+
+# caching disabled for now
+# cache:
+#   directories:
+#   - ${TRAVIS_BUILD_DIR}/deps
+
+branches:
+  only:
+  - default+travis
+  - v0-8+travis
+
+matrix:
+  include:
+    - env: COMPILER=g++-4.8 BOOST_VER_NUM=57
+    - env: COMPILER=g++-4.8 BOOST_VER_NUM=58
+    - env: COMPILER=g++-4.8 BOOST_VER_NUM=59
+    - env: COMPILER=g++-4.8 BOOST_VER_NUM=60
+    - env: COMPILER=g++-4.8 BOOST_VER_NUM=61
+    - env: COMPILER=g++-4.8 BOOST_VER_NUM=62
+    - env: COMPILER=g++-4.8 BOOST_VER_NUM=master
+    - env: COMPILER=g++-4.9 BOOST_VER_NUM=57
+    - env: COMPILER=g++-4.9 BOOST_VER_NUM=58
+    - env: COMPILER=g++-4.9 BOOST_VER_NUM=59
+    - env: COMPILER=g++-4.9 BOOST_VER_NUM=60
+    - env: COMPILER=g++-4.9 BOOST_VER_NUM=61
+    - env: COMPILER=g++-4.9 BOOST_VER_NUM=62
+    - env: COMPILER=g++-4.9 BOOST_VER_NUM=master
+    - env: COMPILER=g++-5 BOOST_VER_NUM=57
+    - env: COMPILER=g++-5 BOOST_VER_NUM=58
+    - env: COMPILER=g++-5 BOOST_VER_NUM=59
+    - env: COMPILER=g++-5 BOOST_VER_NUM=60
+    - env: COMPILER=g++-5 BOOST_VER_NUM=61
+    - env: COMPILER=g++-5 BOOST_VER_NUM=62
+    - env: COMPILER=g++-5 BOOST_VER_NUM=master
+
+  allow_failures:
+    - env: COMPILER=g++-4.8 BOOST_VER_NUM=59
+    - env: COMPILER=g++-4.9 BOOST_VER_NUM=59
+    - env: COMPILER=g++-5 BOOST_VER_NUM=59
+    - env: COMPILER=g++-4.8 BOOST_VER_NUM=60
+    - env: COMPILER=g++-4.9 BOOST_VER_NUM=60
+    - env: COMPILER=g++-5 BOOST_VER_NUM=60
+
+before_install:
+# set CXX variable
+  - export CXX=${COMPILER}
+  - echo ${CXX}
+
+# Make a 'deps' dir to hold installed stuff (boost)
+  - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
+  - mkdir ${DEPS_DIR} && cd ${DEPS_DIR}
+
+install:
+# Install build tools
+# Need to add a PPA to get cmake 3.x
+  - sudo apt-get install software-properties-common -y
+  - sudo add-apt-repository ppa:george-edison55/cmake-3.x -y
+  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+  - sudo apt-get update -qq
+  - sudo apt-get -y install gcc g++-4.8 g++-4.9 g++-5 cmake-data cmake make
+
+  - cmake --version
+
+# Cegui deps
+  - sudo apt-get -y install libfreetype6-dev libsilly-dev libxml2-dev libexpat1-dev libgles2-mesa-dev libglfw-dev libglew-dev libglm-dev
+
+# Install Boost from sourceforge or github
+  - |
+    if [[ ${BOOST_VER_NUM} == "master" ]]; then
+      travis_retry git clone --depth 1 --recursive --quiet https://github.com/boostorg/boost || exit 1
+    else
+      BOOST_DOT_VER_STRING=1.${BOOST_VER_NUM}.0
+      BOOST_TAR_NAME=boost_1_${BOOST_VER_NUM}_0.tar.gz
+
+      BOOST_URL="http://sourceforge.net/projects/boost/files/boost/${BOOST_DOT_VER_STRING}/${BOOST_TAR_NAME}"
+      travis_retry wget --no-check-certificate ${BOOST_URL}
+ 
+      mkdir -p boost
+      cat ${BOOST_TAR_NAME} | tar --strip-components=1 -xz -C boost
+    fi
+  - ls
+
+  - cd boost
+  - ./bootstrap.sh
+  - sudo ./b2 toolset=gcc install --with-python -d0
+
+#   - export BOOST_ROOT=${DEPS_DIR}/boost 
+  - export BOOST_ROOT=/usr/local
+
+script:
+  - cd ${TRAVIS_BUILD_DIR}
+  - mkdir build
+  - cd build
+  - cmake -DCEGUI_BUILD_PYTHON_MODULES=ON -DCEGUI_BUILD_RENDERER_OPENGL=ON -DCEGUI_BUILD_RENDERER_OPENGL3=ON ../ 
+  - make -j2
+
